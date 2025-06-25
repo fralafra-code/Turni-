@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>📅 Turni MediaWorld</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary-color: #0047ab; /* cobalto */
+            --light-color: #f0f4ff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-color);
+            color: var(--text-color);
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        label {
+            font-weight: 600;
+            margin-top: 15px;
+            display: block;
+        }
+
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            margin-top: 20px;
+            font-size: 1em;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #00388a;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 25px;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .actions button {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
+        .summary {
+            margin-top: 30px;
+            background: var(--light-color);
+            padding: 15px;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 6px;
+            font-size: 1em;
+        }
+
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <header>📅 Gestione Turni MediaWorld</header>
+    <div class="container">
+        <label for="date"><span class="emoji">📆</span>Data</label>
+        <input type="date" id="date">
+
+        <label for="shift"><span class="emoji">🕒</span>Turno</label>
+        <select id="shift">
+            <option value="Mattina">🌅 Mattina (10:00 - 14:00)</option>
+            <option value="Sera">🌇 Sera (17:00 - 21:00)</option>
+            <option value="Spezzato">🔁 Spezzato (10-14 + 17-21)</option>
+            <option value="Personalizzato">✍️ Personalizzato (8h)</option>
+        </select>
+
+        <button onclick="addShift()">➕ Aggiungi Turno</button>
+
+        <table id="shiftTable">
+            <thead>
+                <tr>
+                    <th>📅 Data</th>
+                    <th>🕓 Turno</th>
+                    <th>⏱️ Ore</th>
+                    <th>⚙️ Azioni</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="summary" id="summary"></div>
+    </div>
+
+<script>
+const ORE_TURNI = {
+    "Mattina": 4,
+    "Sera": 4,
+    "Spezzato": 8,
+    "Personalizzato": 8
+};
+
+function loadShifts() {
+    return JSON.parse(localStorage.getItem("shifts") || "[]");
+}
+
+function saveShifts(shifts) {
+    localStorage.setItem("shifts", JSON.stringify(shifts));
+}
+
+function addShift() {
+    const date = document.getElementById("date").value;
+    const shift = document.getElementById("shift").value;
+
+    if (!date) {
+        alert("Seleziona una data.");
+        return;
+    }
+
+    const shifts = loadShifts();
+    const existing = shifts.find(s => s.date === date);
+
+    if (existing) {
+        if (!confirm("C'è già un turno per questa data. Vuoi sovrascriverlo?")) return;
+        existing.shift = shift;
+        existing.hours = ORE_TURNI[shift];
+    } else {
+        shifts.push({ date, shift, hours: ORE_TURNI[shift] });
+    }
+
+    saveShifts(shifts);
+    renderShifts();
+}
+
+function deleteShift(date) {
+    const shifts = loadShifts().filter(s => s.date !== date);
+    saveShifts(shifts);
+    renderShifts();
+}
+
+function renderShifts() {
+    const shifts = loadShifts().sort((a, b) => a.date.localeCompare(b.date));
+    const tbody = document.querySelector("#shiftTable tbody");
+    tbody.innerHTML = "";
+
+    let totalHours = 0;
+
+    shifts.forEach(shift => {
+        totalHours += shift.hours;
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${shift.date}</td>
+            <td>${shift.shift}</td>
+            <td>${shift.hours}</td>
+            <td class="actions">
+                <button onclick="editShift('${shift.date}')">✏️ Modifica</button>
+                <button onclick="deleteShift('${shift.date}')">🗑️ Elimina</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    const salary = (totalHours * 7).toFixed(2);
+    const hourlyFromFixed = totalHours > 0 ? (977 / totalHours).toFixed(2) : "0.00";
+
+    document.getElementById("summary").innerHTML = `
+        <div><span class="emoji">⏳</span>Ore totali: <strong>${totalHours}h</strong></div>
+        <div><span class="emoji">💰</span>Stima stipendio (€7/h): <strong>${salary} €</strong></div>
+        <div><span class="emoji">📉</span>Retribuzione oraria reale (da 977€): <strong>${hourlyFromFixed} €/h</strong></div>
+    `;
+}
+
+function editShift(date) {
+    const shifts = loadShifts();
+    const shift = shifts.find(s => s.date === date);
+    if (shift) {
+        document.getElementById("date").value = shift.date;
+        document.getElementById("shift").value = shift.shift;
+    }
+}
+
+renderShifts();
+</script>
+</body>
+</html>
